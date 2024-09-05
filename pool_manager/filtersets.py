@@ -1,24 +1,43 @@
+import django_filters
 from netbox.filtersets import NetBoxModelFilterSet
-from utilities.forms.fields import DynamicModelChoiceField
+from utilities.filters import MultiValueCharFilter
 
-from .models import Pool, PoolLease
+from .models import AlgorithmChoices, Pool, PoolLease
 
 
 class PoolFilterSet(NetBoxModelFilterSet):
 
+    name = MultiValueCharFilter(
+        lookup_expr='icontains'
+    )
+    description = MultiValueCharFilter(
+        lookup_expr='icontains'
+    )
+    algorithm = django_filters.MultipleChoiceFilter(
+        choices=AlgorithmChoices,
+        null_value=None
+    )
+
     class Meta:
         model = Pool
-        fields = ('id', 'name', 'description', 'range')
-
-    def search(self, queryset, name, value):
-        return queryset.filter(name__icontains=value) | queryset.filter(description__icontains=value) | queryset.filter(range__icontains=value)
+        fields = ('id', 'name', 'description', 'algorithm')
+        
 
 
 class PoolLeaseFilterSet(NetBoxModelFilterSet):
+    pool = django_filters.ModelMultipleChoiceFilter(
+        queryset=Pool.objects.all(),
+    )
+    requester_id = MultiValueCharFilter(
+        lookup_expr='icontains'
+    )
+    requester_details = MultiValueCharFilter(
+        lookup_expr='icontains'
+    )
+    tag = MultiValueCharFilter(
+        lookup_expr='icontains'
+    )
 
     class Meta:
         model = PoolLease
-        fields = ('id', 'pool', 'requester_id', 'requester_details')
-
-    def search(self, queryset, name, value):
-        return queryset.filter(pool__name__icontains=value) | queryset.filter(requester_id__icontains=value) | queryset.filter(requester_details__icontains=value)
+        fields = ('id', 'pool', 'requester_id', 'requester_details', 'tag')

@@ -1,11 +1,16 @@
+import random
+import re
+
 from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
-
-from django.http import HttpResponseBadRequest
-
 from netbox.models import NetBoxModel
 
+
+class AlgorithmChoices(models.TextChoices):
+    FIRST_AVAILABLE = u'first_available', 'First Available'
+    ROUND_ROBIN = u'round_robin', 'Round Robin'
+    RANDOM = u'random', 'Random'
 
 class Pool(NetBoxModel):
     name = models.CharField(
@@ -24,12 +29,24 @@ class Pool(NetBoxModel):
         blank=False,
         validators=[
             RegexValidator(
-                regex=r'^((\s*\d+\s*)(-\s*\d+\s*)?(,)?)+$',
+                regex=r'^((\s*\d+\s*)+(-\s*\d+\s*)?)(,((\s*\d+\s*)+(-\s*\d+\s*)?))*$',
                 message="Enter a valid range.",
                 code="invalid_range",
             ),
         ],
         help_text="The range(s) of the pool in the format of integer or integer-integer and separated by a comma. ie. 1-10, 20-30, 35, 40"
+    )
+    algorithm = models.CharField(
+        max_length=50,
+        blank=False,
+        choices=AlgorithmChoices.choices,
+        default=AlgorithmChoices.FIRST_AVAILABLE,
+        help_text="The type of algorithm to pull from the pool."
+    )
+    index = models.PositiveIntegerField(
+        blank=True,
+        default=0,
+        help_text="The current index of the pool (for round robin)."
     )
 
     class Meta:
@@ -41,16 +58,29 @@ class Pool(NetBoxModel):
     def get_absolute_url(self):
         return reverse('plugins:pool_manager:pool', args=[self.pk])
     
+    def get_pool_lease_details(self):
+        range_list = Pool.get_range_as_list(self.range)
+        pool_size = len(range_list)
+        existing_pool_lease_list = PoolLease.get_pool_lease_range_numbers(self.id)
+        in_use = len(existing_pool_lease_list)
+
+        return pool_size, in_use, (pool_size - in_use)
+    
     def get_pool_by_name(pool_name):
         return Pool.objects.get(name=pool_name)
     
     def get_pool_by_id(pool_id):
         return Pool.objects.get(id=pool_id)
     
-    def get_range_as_tuple_list(pool_id):
-        pool_range_list = Pool.get_pool_by_id(pool_id).range.replace(' ', '').split(',')
+    def get_range_as_list(range_str):
+        valid = re.findall('^((\s*\d+\s*)+(-\s*\d+\s*)?)(,((\s*\d+\s*)+(-\s*\d+\s*)?))*$', range_str)
+        # Invalid range
+        if len(valid) == 0:
+            return None
         
-        pool_range_tuple_list = []
+        pool_range_list = range_str.replace(' ', '').split(',')
+
+        pool_range_as_list = []
         for pool_range_str in pool_range_list:
             pool_range_str_as_list = pool_range_str.split('-')
             start_range = int(pool_range_str_as_list[0])
@@ -58,12 +88,20 @@ class Pool(NetBoxModel):
                 end_range = start_range
             else:
                 end_range = int(pool_range_str_as_list[1])
-            pool_range_tuple_list.append((start_range, end_range))
+            
+            # Invalid range
+            if start_range > end_range:
+                return None
+
+            for range_number in range(start_range, end_range+1):
+                pool_range_as_list.append(range_number)
+
+        # Remove duplicate values
+        pool_range_as_list = list(set(pool_range_as_list))
+
+        pool_range_as_list.sort()
         
-        pool_range_tuple_list.sort()
-
-        return pool_range_tuple_list
-
+        return pool_range_as_list
 
 class PoolLease(NetBoxModel):
     pool = models.ForeignKey(
@@ -86,13 +124,18 @@ class PoolLease(NetBoxModel):
         blank=False,
         help_text="The range number assigned to the lease in the pool."
     )
+    tag = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="A tag to categorize the pool lease."
+    )
 
     class Meta:
         ordering = ('pool', 'range_number')
         unique_together = ('pool', 'range_number')
 
     def __str__(self):
-        return f'{self.pool}: Range Number {self.range_number}'
+        return f'Pool: {self.pool}, Range Number {self.range_number}'
 
     def get_absolute_url(self):
         return reverse('plugins:pool_manager:poollease', args=[self.pk])
@@ -101,16 +144,51 @@ class PoolLease(NetBoxModel):
         return PoolLease.objects.get(id=lease_id)
     
     def get_pool_lease_range_numbers(pool_id):
-        return list(PoolLease.objects.filter(pool=pool_id).values('range_number').values_list('range_number', flat=True))
-    
-    def get_lease_range_number(pool_id):
-        pool_range_tuple_list = Pool.get_range_as_tuple_list(pool_id)
-        existing_range_numbers_list = PoolLease.get_pool_lease_range_numbers(pool_id)
+        return list(PoolLease.objects.filter(pool=pool_id).values('range_number').values_list('range_number', flat=True))    
 
-        for pool_range in pool_range_tuple_list:
-            for range_number in range(pool_range[0], pool_range[1]+1):
-                range_number_count = existing_range_numbers_list.count(range_number)
-                if range_number_count == 0:
-                    return range_number
+    def get_lease_range_number(pool_id):
+        pool = Pool.get_pool_by_id(pool_id)
+        pool_range_list = Pool.get_range_as_list(pool.range)
+        if pool_range_list == None:
+            return None
+
+        existing_range_numbers_list = PoolLease.get_pool_lease_range_numbers(pool_id)
         
+        algorithm = pool.algorithm
+        if algorithm == AlgorithmChoices.FIRST_AVAILABLE:
+            for range_number in pool_range_list:
+                if existing_range_numbers_list.count(range_number) == 0:
+                    return range_number
+        elif algorithm == AlgorithmChoices.ROUND_ROBIN:
+            index = pool.index
+
+            range_number = None
+            for i in range(0, len(pool_range_list)):
+                try:
+                    indexOfIndex = pool_range_list.index(index)
+                    if existing_range_numbers_list.count(index) == 0:
+                        if indexOfIndex == len(pool_range_list) - 1:
+                            pool.index = pool_range_list[0]
+                        else:
+                            pool.index = pool_range_list[indexOfIndex + 1]
+                        pool.save()
+                        return index
+                    elif indexOfIndex == len(pool_range_list) - 1:
+                        # Need to go back to the front of the array
+                        index = pool_range_list[0]
+                    else:
+                        # Go to the next index
+                        index = pool_range_list[indexOfIndex + 1]
+                except ValueError:
+                    index += 1
+        elif algorithm == AlgorithmChoices.RANDOM:
+            # Create a list that contains range numbers that are available
+            available_range_numbers = pool_range_list.copy()
+            for range_number in existing_range_numbers_list:
+                available_range_numbers.remove(range_number)
+            
+            # Select a random range_number
+            random_range_number = random.choice(available_range_numbers)
+            return random_range_number
+
         return None

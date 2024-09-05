@@ -1,6 +1,6 @@
 from django.db.models import Count
-
 from netbox.views import generic
+
 from . import filtersets, forms, models, tables
 
 
@@ -38,6 +38,12 @@ class PoolDeleteView(generic.ObjectDeleteView):
     queryset = models.Pool.objects.all()
 
 
+class PoolBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.Pool.objects.all()
+    filterset = filtersets.PoolFilterSet
+    table = tables.PoolTable
+
+
 #
 # PoolLease views
 #
@@ -53,6 +59,11 @@ class PoolLeaseListView(generic.ObjectListView):
     filterset_form = forms.PoolLeaseFilterForm
 
 
+class PoolLeaseAddView(generic.ObjectEditView):
+    queryset = models.PoolLease.objects.all()
+    form = forms.PoolLeaseAddForm
+
+
 class PoolLeaseEditView(generic.ObjectEditView):
     queryset = models.PoolLease.objects.all()
     form = forms.PoolLeaseForm
@@ -60,3 +71,9 @@ class PoolLeaseEditView(generic.ObjectEditView):
 
 class PoolLeaseDeleteView(generic.ObjectDeleteView):
     queryset = models.PoolLease.objects.all()
+
+
+class PoolLeaseBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.PoolLease.objects.all()
+    filterset = filtersets.PoolLeaseFilterSet
+    table = tables.PoolLeaseTable

@@ -1,14 +1,10 @@
-from django.urls import path
 from netbox.api.routers import NetBoxRouter
-from .views import NetboxDataDeviceViewSet
-from .views import NetboxDataVlanViewSet
+
+from . import views
 
 app_name = 'netbox_data'
+
 router = NetBoxRouter()
+router.register('deviceInfo', views.DeviceInfoViewSet)
 
-urlpatterns = [
-    path('device/', NetboxDataDeviceViewSet.as_view(), name='device'),
-    path('vlan/', NetboxDataVlanViewSet.as_view(), name='vlan')
-]
-
-urlpatterns += router.urls
+urlpatterns = router.urls

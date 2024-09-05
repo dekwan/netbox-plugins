@@ -1,12 +1,10 @@
-from extras.plugins import PluginMenuButton, PluginMenuItem
-from utilities.choices import ButtonColorChoices
+from netbox.plugins import PluginMenuButton, PluginMenuItem
 
 pool_buttons = [
     PluginMenuButton(
         link='plugins:pool_manager:pool_add',
         title='Add',
-        icon_class='mdi mdi-plus-thick',
-        color=ButtonColorChoices.GREEN
+        icon_class='mdi mdi-plus-thick'
     )
 ]
 
@@ -14,8 +12,7 @@ poollease_butons = [
     PluginMenuButton(
         link='plugins:pool_manager:poollease_add',
         title='Add',
-        icon_class='mdi mdi-plus-thick',
-        color=ButtonColorChoices.GREEN
+        icon_class='mdi mdi-plus-thick'
     )
 ]
 
