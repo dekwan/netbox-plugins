@@ -1,16 +1,25 @@
 import json
 
+from netbox.api.viewsets import NetBoxModelViewSet
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import filtersets, models
 from ..utilities import fetchDeviceInfoByName, fetchVlanInfoByNameVid
-from .serializers import DeviceInfoAPISerializer, VlanInfoAPISerializer
+from .serializers import (DeviceInfoAPISerializer, DeviceInfoSerializer,
+                          VlanInfoAPISerializer, VlanInfoSerializer)
 
 FIELD_MISSING = "This field cannot be blank."
 
-class DeviceInfoViewSet(APIView):
+# Viewset for the UI
+class DeviceInfoViewSet(NetBoxModelViewSet):
+    queryset = models.DeviceInfo.objects.all()
+    serializer_class = DeviceInfoSerializer
+    filterset_class = filtersets.DeviceInfoFilterSet
+
+# Viewset for the API
+class DeviceInfoAPIViewSet(APIView):
     queryset = models.DeviceInfo.objects.all()
     serializer_class = DeviceInfoAPISerializer
     filterset_class = filtersets.DeviceInfoFilterSet
@@ -42,7 +51,15 @@ class DeviceInfoViewSet(APIView):
         return fetchDeviceInfoByName(site_name, device_name, device_setup_type, remote_config)
 
 
-class VlanInfoViewSet(APIView):
+# Viewset for the UI
+class VlanInfoViewSet(NetBoxModelViewSet):
+    queryset = models.VlanInfo.objects.all()
+    serializer_class = VlanInfoSerializer
+    filterset_class = filtersets.VlanInfoFilterSet
+
+
+# Viewset for the API
+class VlanInfoAPIViewSet(APIView):
     queryset = models.VlanInfo.objects.all()
     serializer_class = VlanInfoAPISerializer
     filterset_class = filtersets.VlanInfoFilterSet

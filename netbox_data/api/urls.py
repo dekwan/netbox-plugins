@@ -7,9 +7,14 @@ app_name = 'netbox_data'
 
 router = NetBoxRouter()
 
+# URLs for the UI
+router.register('deviceInfo', views.DeviceInfoViewSet)
+router.register('vlanInfo', views.VlanInfoViewSet)
+
+# URLs for the API
 urlpatterns = [
-    path('device/', views.DeviceInfoViewSet.as_view(), name='device'),
-    path('vlan/', views.VlanInfoViewSet.as_view(), name='vlan')
+    path('device/', views.DeviceInfoAPIViewSet.as_view(), name='device'),
+    path('vlan/', views.VlanInfoAPIViewSet.as_view(), name='vlan')
 ]
 
 urlpatterns += router.urls

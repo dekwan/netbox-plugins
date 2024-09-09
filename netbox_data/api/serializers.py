@@ -2,14 +2,14 @@
 from dcim.models import Device, Site
 from django.core.exceptions import ValidationError
 from ipam.models import VLAN
-from netbox.api.serializers import (NetBoxModelSerializer,
-                                    WritableNestedSerializer)
+from netbox.api.serializers import NetBoxModelSerializer
 from rest_framework import serializers
 
 from ..models import DeviceInfo, VlanInfo
 from ..utilities import fetchDeviceInfo, fetchVlanInfo
 
 
+# Serializer for the UI
 class DeviceInfoSerializer(NetBoxModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='plugins-api:netbox_data-api:deviceinfo-detail'
@@ -24,6 +24,7 @@ class DeviceInfoSerializer(NetBoxModelSerializer):
         kwargs['partial'] = True
         super(DeviceInfoSerializer, self).__init__(*args, **kwargs)
 
+# Serializer for the API
 class DeviceInfoAPISerializer(NetBoxModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='plugins-api:netbox_data-api:deviceinfo-detail'
@@ -65,6 +66,7 @@ class DeviceInfoAPISerializer(NetBoxModelSerializer):
 
         return super().validate(data)
 
+# Serializer for the UI
 class VlanInfoSerializer(NetBoxModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='plugins-api:netbox_data-api:vlaninfo-detail'
@@ -78,6 +80,7 @@ class VlanInfoSerializer(NetBoxModelSerializer):
         kwargs['partial'] = True
         super(VlanInfoSerializer, self).__init__(*args, **kwargs)
 
+# Serializer for the API
 class VlanInfoAPISerializer(NetBoxModelSerializer):
     url = serializers.HyperlinkedIdentityField(
         view_name='plugins-api:netbox_data-api:vlaninfo-detail'
