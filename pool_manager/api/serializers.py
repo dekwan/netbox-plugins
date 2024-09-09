@@ -35,30 +35,32 @@ class PoolSerializer(NetBoxModelSerializer):
         super(PoolSerializer, self).__init__(*args, **kwargs)
 
     def validate(self, data):
-        try:
-            if self.instance and 'range' in data: # It is a PUT
-                pool = Pool.get_pool_by_id(self.instance.id)
+        # Validate the range
+        if 'range' in data:
+            new_range = data['range']
+            range_as_list = Pool.get_range_as_list(new_range)
+            if range_as_list == None:
+                raise serializers.ValidationError({
+                        'range': f'Enter a valid range.'
+                    })
+            
+            # Check to see if the range can be changed
+            try:
+                if self.instance: # It is a PUT
+                    pool = Pool.get_pool_by_id(self.instance.id)
 
-                # If the range changed
-                if pool.range != data['range']:
-                    new_range = data['range']
-
-                    range_as_list = Pool.get_range_as_list(new_range)
-                    if range_as_list == None:
-                        raise serializers.ValidationError({
-                                'range': f'Enter a valid range.'
-                            })
-                    
-                    existing_pool_leases = PoolLease.get_pool_lease_range_numbers(pool)
-                    for pool_lease in existing_pool_leases:
-                        if pool_lease not in range_as_list:
-                            # Error occured
-                            raise serializers.ValidationError({
-                                'range': f'Cannot change the range for this pool. Please remove pool lease {pool_lease} first.'
-                            })
-        except (PoolLease.DoesNotExist, Pool.DoesNotExist, KeyError):
-            # The pool doesn't exist yet so do nothing
-            pass
+                    # If the range changed
+                    if pool.range != new_range:
+                        existing_pool_leases = PoolLease.get_pool_lease_range_numbers(pool)
+                        for pool_lease in existing_pool_leases:
+                            if pool_lease not in range_as_list:
+                                # Error occured
+                                raise serializers.ValidationError({
+                                    'range': f'Cannot change the range for this pool. Please remove pool lease {pool_lease} first.'
+                                })
+            except (PoolLease.DoesNotExist, Pool.DoesNotExist, KeyError):
+                # The pool doesn't exist yet so do nothing
+                pass
 
         return super(PoolSerializer, self).validate(data)        
 

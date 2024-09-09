@@ -30,3 +30,33 @@ class DeviceInfoBulkDeleteView(generic.BulkDeleteView):
     queryset = models.DeviceInfo.objects.all()
     filterset = filtersets.DeviceInfoFilterSet
     table = tables.DeviceInfoTable
+
+
+#
+# VlanInfo views
+#
+
+class VlanInfoView(generic.ObjectView):
+    queryset = models.VlanInfo.objects.all()
+
+
+class VlanInfoListView(generic.ObjectListView):
+    queryset = models.VlanInfo.objects.all()
+    table = tables.VlanInfoTable
+    filterset = filtersets.VlanInfoFilterSet
+    filterset_form = forms.VlanInfoFilterForm
+
+
+class VlanInfoEditView(generic.ObjectEditView):
+    queryset = models.VlanInfo.objects.all()
+    form = forms.VlanInfoForm
+
+
+class VlanInfoDeleteView(generic.ObjectDeleteView):
+    queryset = models.VlanInfo.objects.all()
+
+
+class VlanInfoBulkDeleteView(generic.BulkDeleteView):
+    queryset = models.VlanInfo.objects.all()
+    filterset = filtersets.VlanInfoFilterSet
+    table = tables.VlanInfoTable

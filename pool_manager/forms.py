@@ -23,11 +23,17 @@ class PoolForm(ModelForm):
                 try:
                     pool = Pool.get_pool_by_name(self.data['name'])
 
+                    
                     existing_pool_leases = PoolLease.get_pool_lease_range_numbers(pool)
+                    reset_index = True
                     for pool_lease in existing_pool_leases:
                         if pool_lease not in range_as_list:
                             # Error occured
                             self.add_error('range', f'Cannot change the range for this pool. Please remove pool lease {pool_lease} first.')
+                            reset_index = False
+                    
+                    if reset_index:
+                        self.data['index'] = 0
                 except (PoolLease.DoesNotExist, Pool.DoesNotExist, KeyError):
                     # New pool so do nothing.
                     pass
@@ -49,11 +55,9 @@ class PoolFilterForm(NetBoxModelFilterSetForm):
     )
 
 class PoolLeaseAddForm(ModelForm):
-    pool = DynamicModelChoiceField(
-        queryset=Pool.objects.all()
-    )
     request_count = forms.IntegerField(
         required=False,
+        initial=1,
         help_text='The number of leases requested.'
     )
 

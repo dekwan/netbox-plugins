@@ -1,5 +1,4 @@
 import random
-import re
 
 from django.core.validators import RegexValidator
 from django.db import models
@@ -73,35 +72,33 @@ class Pool(NetBoxModel):
         return Pool.objects.get(id=pool_id)
     
     def get_range_as_list(range_str):
-        valid = re.findall('^((\s*\d+\s*)+(-\s*\d+\s*)?)(,((\s*\d+\s*)+(-\s*\d+\s*)?))*$', range_str)
-        # Invalid range
-        if len(valid) == 0:
-            return None
-        
-        pool_range_list = range_str.replace(' ', '').split(',')
+        try:
+            pool_range_list = range_str.replace(' ', '').split(',')
 
-        pool_range_as_list = []
-        for pool_range_str in pool_range_list:
-            pool_range_str_as_list = pool_range_str.split('-')
-            start_range = int(pool_range_str_as_list[0])
-            if(len(pool_range_str_as_list) == 1):
-                end_range = start_range
-            else:
-                end_range = int(pool_range_str_as_list[1])
+            pool_range_as_list = []
+            for pool_range_str in pool_range_list:
+                pool_range_str_as_list = pool_range_str.split('-')
+                start_range = int(pool_range_str_as_list[0])
+                if(len(pool_range_str_as_list) == 1):
+                    end_range = start_range
+                else:
+                    end_range = int(pool_range_str_as_list[1])
+                
+                # Invalid range
+                if start_range > end_range:
+                    return None
+
+                for range_number in range(start_range, end_range+1):
+                    pool_range_as_list.append(range_number)
+
+            # Remove duplicate values
+            pool_range_as_list = list(set(pool_range_as_list))
+
+            pool_range_as_list.sort()
             
-            # Invalid range
-            if start_range > end_range:
-                return None
-
-            for range_number in range(start_range, end_range+1):
-                pool_range_as_list.append(range_number)
-
-        # Remove duplicate values
-        pool_range_as_list = list(set(pool_range_as_list))
-
-        pool_range_as_list.sort()
-        
-        return pool_range_as_list
+            return pool_range_as_list
+        except Exception:
+            return None
 
 class PoolLease(NetBoxModel):
     pool = models.ForeignKey(
@@ -161,26 +158,21 @@ class PoolLease(NetBoxModel):
                     return range_number
         elif algorithm == AlgorithmChoices.ROUND_ROBIN:
             index = pool.index
-
-            range_number = None
+            
             for i in range(0, len(pool_range_list)):
-                try:
-                    indexOfIndex = pool_range_list.index(index)
-                    if existing_range_numbers_list.count(index) == 0:
-                        if indexOfIndex == len(pool_range_list) - 1:
-                            pool.index = pool_range_list[0]
-                        else:
-                            pool.index = pool_range_list[indexOfIndex + 1]
-                        pool.save()
-                        return index
-                    elif indexOfIndex == len(pool_range_list) - 1:
-                        # Need to go back to the front of the array
-                        index = pool_range_list[0]
-                    else:
-                        # Go to the next index
-                        index = pool_range_list[indexOfIndex + 1]
-                except ValueError:
-                    index += 1
+                if index >= len(pool_range_list):
+                    # Need to go back to the front of the array
+                    index = 0
+
+                range_number = pool_range_list[index]
+
+                # Go to the next index
+                index += 1
+                
+                if existing_range_numbers_list.count(range_number) == 0:
+                    pool.index = index
+                    pool.save()
+                    return range_number
         elif algorithm == AlgorithmChoices.RANDOM:
             # Create a list that contains range numbers that are available
             available_range_numbers = pool_range_list.copy()
