@@ -226,7 +226,7 @@ def fetchVlanInfo(site_id, vlan_id):
         
         firewall_cidr = "" if firewall_device_info.primary_ip is None else str(firewall_device_info.primary_ip.address)
         nb_data["firewall_cidr"] = firewall_cidr
-        nb_data["firewall_ip"] = "" if firewall_cidr else firewall_cidr.split("/")[0] # Don't need to check on the length of the split because the inforcement of the / is mandatory during creation
+        nb_data["firewall_ip"] = firewall_cidr.split("/")[0] if firewall_cidr else "" # Don't need to check on the length of the split because the inforcement of the / is mandatory during creation
         nb_data["firewall_name"] = firewall_name
         nb_data["pod_name"] = vlan.name
         nb_data["nat_ip_address"] = str(firewall_device_info.cf['vpnless_nat_ip'].address) if 'vpnless_nat_ip' in firewall_device_info.cf else ""

@@ -33,7 +33,7 @@ class PoolForm(ModelForm):
                             reset_index = False
                     
                     if reset_index:
-                        self.data['index'] = 0
+                        self.instance.index = 0
                 except (PoolLease.DoesNotExist, Pool.DoesNotExist, KeyError):
                     # New pool so do nothing.
                     pass

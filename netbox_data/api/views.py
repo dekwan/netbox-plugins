@@ -44,6 +44,8 @@ class DeviceInfoAPIViewSet(APIView):
             response_text['device_name'] = [f'{FIELD_MISSING}']
         if not device_setup_type:
             response_text['device_setup_type'] = [f'{FIELD_MISSING}']
+        elif device_setup_type != models.DeviceSetupTypeChoices.CLEAN.value and device_setup_type != models.DeviceSetupTypeChoices.RESERVATION.value:
+            response_text['device_setup_type'] = [f'This field can only be {models.DeviceSetupTypeChoices.CLEAN} or {models.DeviceSetupTypeChoices.RESERVATION}']
 
         if response_text != {}:
             return Response(response_text, status=status.HTTP_400_BAD_REQUEST)
@@ -80,6 +82,9 @@ class VlanInfoAPIViewSet(APIView):
             response_text['site_name'] = [f'{FIELD_MISSING}']
         if not vlan:
             response_text['vlan'] = [f'{FIELD_MISSING}']
+        elif not isinstance(vlan, int):
+            response_text['vlan'] = [f'The field must be an int.']
+
 
         if response_text != {}:
             return Response(response_text, status=status.HTTP_400_BAD_REQUEST)
